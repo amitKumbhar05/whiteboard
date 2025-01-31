@@ -1,23 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { io } from "socket.io-client"
 const Canvas = (props) => {
-  const socket = io('http://localhost:5000')
   const canvasref = useRef(null)
   const contextRef = useRef(null);
+  const socketRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
-
-  const draw = (ctx, frameCount) => {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-    ctx.fillStyle = '#000000'
-    ctx.beginPath()
-    // ctx.arc(50, 100, 20 * Math.sin(frameCount * 0.05) ** 2, 0, 2 * Math.PI)
-    // ctx.moveTo(1000, 3000)
-    // ctx.lineTo(1000, 3000)
-    // ctx.stroke()
-    // ctx.fill()
-  }
+  const [lastPosition, setLastPosition] = useState({ offsetX: 0, offsetY: 0 });
+  // const draw = (ctx, frameCount) => {
+  //   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  //   ctx.fillStyle = '#000000'
+  //   ctx.beginPath()
+  //   // ctx.arc(50, 100, 20 * Math.sin(frameCount * 0.05) ** 2, 0, 2 * Math.PI)
+  //   // ctx.moveTo(1000, 3000)
+  //   // ctx.lineTo(1000, 3000)
+  //   // ctx.stroke()
+  //   // ctx.fill()
+  // }
 
   useEffect(() => {
+    socketRef.current = io('http://localhost:5000')
     const canvas = canvasref.current
     const context = canvas.getContext('2d')
     canvas.width = window.innerWidth;
@@ -40,22 +41,33 @@ const Canvas = (props) => {
     // // draw(context)
     // return () => {
     //   window.cancelAnimationFrame(animationFrameId)
-    socket.on('draw', ({ offsetX, offsetY }) => {
-      contextRef.current.lineTo(offsetX, offsetY);
-      contextRef.current.stroke();
+    // }
+    socketRef.current.on('draw', ({ startX, startY, endX, endY }) => {
+      drawLine(contextRef.current, startX, startY, endX, endY);
     });
 
-    socket.on('clear', () => {
-      contextRef.current.clearRect(0, 0, canvas.width, canvas.height);
-    });
-    // }
+    // socket.on('clear', () => {
+    //   contextRef.current.clearRect(0, 0, canvas.width, canvas.height);
+    // });
+    return () => {
+      socketRef.current.disconnect();
+    };
   }, [])
+
+  const drawLine = (context, startX, startY, endX, endY) => {
+    context.beginPath();
+    context.moveTo(startX, startY);
+    context.lineTo(endX, endY);
+    context.stroke();
+    context.closePath();
+  };
 
   const startDrawing = ({ nativeEvent }) => {
     const { offsetX, offsetY } = nativeEvent;
     contextRef.current.beginPath();
     contextRef.current.moveTo(offsetX, offsetY);
     setIsDrawing(true);
+    setLastPosition({ offsetX, offsetY });
   };
   const finishDrawing = () => {
     contextRef.current.closePath();
@@ -64,9 +76,14 @@ const Canvas = (props) => {
   const drr = ({ nativeEvent }) => {
     if (!isDrawing) return;
     const { offsetX, offsetY } = nativeEvent;
-    contextRef.current.lineTo(offsetX, offsetY);
-    contextRef.current.stroke();
-    socket.emit('draw', { offsetX, offsetY });
+    drawLine(contextRef.current, lastPosition.offsetX, lastPosition.offsetY, offsetX, offsetY);
+    setLastPosition({ offsetX, offsetY });
+    socketRef.current.emit('draw', {
+      startX: lastPosition.offsetX,
+      startY: lastPosition.offsetY,
+      endX: offsetX,
+      endY: offsetY,
+    });
   };
 
   return <canvas
