@@ -20,8 +20,8 @@ const Canvas = (props) => {
   // }
 
   useEffect(() => {
-    // socketRef.current = io('https://whiteboard-backend-c4ys.onrender.com')
-    socketRef.current = io('http://localhost:5000')
+    socketRef.current = io('https://whiteboard-backend-c4ys.onrender.com')
+    // socketRef.current = io('http://localhost:5000')
     const canvas = canvasref.current
     const context = canvas.getContext('2d')
     canvas.width = window.innerWidth;
