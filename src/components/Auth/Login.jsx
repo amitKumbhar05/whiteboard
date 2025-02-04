@@ -20,7 +20,8 @@ export default function Login() {
 
     const onformSubmit = (event) => {
         event.preventDefault();
-        axios.post("http://localhost:5000/api/login", formData)
+        // http://localhost:5000/api/login
+        axios.post("https://whiteboard-backend-c4ys.onrender.com/api/login", formData)
             .then((res) => {
                 Swal.fire({
                     title: 'Success !',
